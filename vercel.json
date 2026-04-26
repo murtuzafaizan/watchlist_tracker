@@ -1,16 +1,19 @@
 {
   "version": 2,
-  "functions": {
-    "api/test.js": {
-      "maxDuration": 10
+  "builds": [
+    {
+      "src": "api/test.js",
+      "use": "@vercel/node"
     },
-    "api/search.js": {
-      "maxDuration": 10
+    {
+      "src": "api/search.js",
+      "use": "@vercel/node"
     },
-    "api/show.js": {
-      "maxDuration": 10
+    {
+      "src": "api/show.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/api/test",
