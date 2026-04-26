@@ -147,6 +147,10 @@ jspm_packages/
 .env.test.local
 .env.production.local
 
+# Static files for Vercel
+static/
+public/
+
 # IDE
 .vscode/
 .idea/
