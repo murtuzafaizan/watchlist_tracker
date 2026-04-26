@@ -117,6 +117,10 @@
             noResults.classList.add('hidden');
 
             try {
+                // First test if API is working
+                const testResponse = await fetch(`/api/test`);
+                console.log('API Test Response:', await testResponse.json());
+                
                 const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
                 const results = await response.json();
 
@@ -135,6 +139,15 @@
                 console.error('Search error:', error);
                 loadingSpinner.classList.add('hidden');
                 noResults.classList.remove('hidden');
+                // Show error message
+                searchResults.innerHTML = `
+                    <div class="col-span-full bg-red-900 border border-red-600 rounded-lg p-4">
+                        <p class="text-red-300">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            API Error: ${error.message}
+                        </p>
+                    </div>
+                `;
             }
         }
 

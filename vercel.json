@@ -1,6 +1,9 @@
 {
   "version": 2,
   "functions": {
+    "api/test.js": {
+      "maxDuration": 10
+    },
     "api/search.js": {
       "maxDuration": 10
     },
@@ -9,6 +12,10 @@
     }
   },
   "routes": [
+    {
+      "src": "/api/test",
+      "dest": "/api/test"
+    },
     {
       "src": "/api/search",
       "dest": "/api/search"
