@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= show.title %> - <%= season.name %> - Watch Tracking</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .episode-card {
+            transition: all 0.3s ease;
+        }
+        .episode-card:hover {
+            transform: translateX(8px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+        .episode-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .watched-indicator {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <nav class="flex items-center space-x-4 mb-6">
+                <a href="/" class="text-blue-400 hover:text-blue-300">
+                    <i class="fas fa-home mr-2"></i>Home
+                </a>
+                <span class="text-gray-600">/</span>
+                <a href="/show/<%= show.tmdb_id %>" class="text-blue-400 hover:text-blue-300">
+                    <%= show.title %>
+                </a>
+                <span class="text-gray-600">/</span>
+                <span class="text-gray-400"><%= season.name %></span>
+            </nav>
+            
+            <div class="flex items-center gap-6">
+                <% if (season.poster_path) { %>
+                    <img src="<%= season.poster_path %>" 
+                         alt="<%= season.name %>" 
+                         class="w-24 h-36 object-cover rounded-lg shadow-xl">
+                <% } %>
+                <div>
+                    <h1 class="text-3xl font-bold mb-2"><%= show.title %></h1>
+                    <h2 class="text-2xl text-blue-400 mb-4"><%= season.name %></h2>
+                    <div class="flex items-center gap-4 text-gray-400">
+                        <span><i class="fas fa-list mr-2"></i><%= episodes.length %> Episodes</span>
+                        <% if (season.air_date) { %>
+                            <span><i class="fas fa-calendar mr-2"></i><%= new Date(season.air_date).getFullYear() %></span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <% if (season.overview) { %>
+                <div class="bg-gray-800 rounded-lg p-6 mb-8">
+                    <h3 class="text-xl font-bold mb-3">Season Overview</h3>
+                    <p class="text-gray-300 leading-relaxed"><%= season.overview %></p>
+                </div>
+            <% } %>
+
+            <div class="space-y-4">
+                <h3 class="text-2xl font-bold mb-6">Episodes</h3>
+                
+                <% episodes.forEach(episode => { %>
+                    <div class="episode-card bg-gray-800 rounded-lg overflow-hidden cursor-pointer flex">
+                        <div class="episode-number w-20 flex items-center justify-center text-2xl font-bold">
+                            <%= episode.episode_number %>
+                        </div>
+                        
+                        <div class="flex-1 flex">
+                            <% if (episode.still_path) { %>
+                                <img src="<%= episode.still_path %>" 
+                                     alt="<%= episode.name %>" 
+                                     class="w-48 h-28 object-cover">
+                            <% } else { %>
+                                <div class="w-48 h-28 bg-gray-700 flex items-center justify-center">
+                                    <i class="fas fa-image text-gray-600 text-2xl"></i>
+                                </div>
+                            <% } %>
+                            
+                            <div class="flex-1 p-4">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-bold text-lg"><%= episode.name %></h4>
+                                    <div class="flex items-center gap-2">
+                                        <% if (episode.runtime) { %>
+                                            <span class="text-gray-400 text-sm">
+                                                <i class="fas fa-clock mr-1"></i><%= episode.runtime %>m
+                                            </span>
+                                        <% } %>
+                                        <div class="watched-indicator" data-episode-id="<%= episode.id %>">
+                                            <!-- Watch status will be loaded via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <% if (episode.air_date) { %>
+                                    <p class="text-gray-400 text-sm mb-2">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        <%= new Date(episode.air_date).toLocaleDateString() %>
+                                    </p>
+                                <% } %>
+                                
+                                <% if (episode.overview) { %>
+                                    <p class="text-gray-300 text-sm line-clamp-2"><%= episode.overview %></p>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        (function() {
+                            const episodeCard = document.currentScript.parentElement;
+                            episodeCard.addEventListener('click', () => {
+                                window.location.href = `/show/<%= show.tmdb_id %>/season/<%= season.season_number %>/episode/<%= episode.episode_number %>`;
+                            });
+                        })();
+                    </script>
+                <% }); %>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Load watch status for all episodes
+        async function loadWatchStatus() {
+            const indicators = document.querySelectorAll('.watched-indicator');
+            
+            for (const indicator of indicators) {
+                const episodeId = indicator.dataset.episodeId;
+                try {
+                    const response = await fetch(`/api/watch-status/${episodeId}`);
+                    const data = await response.json();
+                    
+                    if (data.watched) {
+                        indicator.innerHTML = `
+                            <span class="bg-green-600 px-2 py-1 rounded text-sm">
+                                <i class="fas fa-check mr-1"></i>Watched
+                            </span>
+                        `;
+                    } else if (data.progress > 0) {
+                        indicator.innerHTML = `
+                            <span class="bg-yellow-600 px-2 py-1 rounded text-sm">
+                                <i class="fas fa-play mr-1"></i>${Math.round(data.progress)}%
+                            </span>
+                        `;
+                    } else {
+                        indicator.innerHTML = `
+                            <span class="bg-gray-600 px-2 py-1 rounded text-sm">
+                                <i class="fas fa-circle mr-1"></i>Not Started
+                            </span>
+                        `;
+                    }
+                } catch (error) {
+                    indicator.innerHTML = `
+                        <span class="bg-gray-600 px-2 py-1 rounded text-sm">
+                            <i class="fas fa-circle mr-1"></i>Not Started
+                        </span>
+                    `;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadWatchStatus);
+    </script>
+</body>
+</html>

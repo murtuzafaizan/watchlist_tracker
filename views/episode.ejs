@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= episode.name %> - <%= show.title %> - Watch Tracking</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .episode-header {
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.9));
+        }
+        .progress-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        .progress-slider::-webkit-slider-track {
+            background: #374151;
+            height: 8px;
+            border-radius: 4px;
+        }
+        .progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #3B82F6;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+        .progress-slider::-moz-range-track {
+            background: #374151;
+            height: 8px;
+            border-radius: 4px;
+        }
+        .progress-slider::-moz-range-thumb {
+            background: #3B82F6;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            border: none;
+        }
+        .progress-bar {
+            background: linear-gradient(to right, #3B82F6 0%, #3B82F6 var(--progress), #374151 var(--progress), #374151 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="episode-header min-h-80 p-8">
+        <div class="container mx-auto">
+            <nav class="flex items-center space-x-4 mb-8">
+                <a href="/" class="text-blue-400 hover:text-blue-300">
+                    <i class="fas fa-home mr-2"></i>Home
+                </a>
+                <span class="text-gray-600">/</span>
+                <a href="/show/<%= show.tmdb_id %>" class="text-blue-400 hover:text-blue-300">
+                    <%= show.title %>
+                </a>
+                <span class="text-gray-600">/</span>
+                <span class="text-gray-400"><%= episode.name %></span>
+            </nav>
+            
+            <div class="max-w-4xl">
+                <h1 class="text-4xl font-bold mb-4"><%= episode.name %></h1>
+                <div class="flex items-center gap-6 text-lg">
+                    <span class="bg-blue-600 px-3 py-1 rounded">
+                        S<%= episode.season_number %> E<%= episode.episode_number %>
+                    </span>
+                    <% if (episode.runtime) { %>
+                        <span><i class="fas fa-clock mr-2"></i><%= episode.runtime %> minutes</span>
+                    <% } %>
+                    <% if (episode.air_date) { %>
+                        <span><i class="fas fa-calendar mr-2"></i><%= new Date(episode.air_date).toLocaleDateString() %></span>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <main class="max-w-4xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Episode Info -->
+                <div class="lg:col-span-2">
+                    <div class="bg-gray-800 rounded-lg p-6 mb-8">
+                        <h2 class="text-2xl font-bold mb-4">Episode Overview</h2>
+                        <p class="text-gray-300 leading-relaxed">
+                            <%= episode.overview || 'No overview available for this episode.' %>
+                        </p>
+                    </div>
+
+                    <!-- Still Image -->
+                    <% if (episode.still_path) { %>
+                        <div class="bg-gray-800 rounded-lg overflow-hidden mb-8">
+                            <img src="<%= episode.still_path %>" 
+                                 alt="<%= episode.name %>" 
+                                 class="w-full">
+                        </div>
+                    <% } %>
+                </div>
+
+                <!-- Watch Progress -->
+                <div class="lg:col-span-1">
+                    <div class="bg-gray-800 rounded-lg p-6 sticky top-8">
+                        <h3 class="text-xl font-bold mb-6">
+                            <i class="fas fa-play-circle mr-2 text-blue-400"></i>
+                            Watch Progress
+                        </h3>
+                        
+                        <div class="space-y-6">
+                            <!-- Progress Display -->
+                            <div>
+                                <div class="flex justify-between text-sm mb-2">
+                                    <span>Progress</span>
+                                    <span id="progressPercent"><%= Math.round((watchProgress.watched_minutes / Math.max(watchProgress.total_minutes, 1)) * 100) %>%</span>
+                                </div>
+                                <div class="progress-bar h-3 rounded-full" style="--progress: <%= (watchProgress.watched_minutes / Math.max(watchProgress.total_minutes, 1)) * 100 %>%"></div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span id="watchedMinutes"><%= watchProgress.watched_minutes %> min</span>
+                                    <span><%= watchProgress.total_minutes %> min</span>
+                                </div>
+                            </div>
+
+                            <!-- Time Slider -->
+                            <div>
+                                <label class="block text-sm font-medium mb-3">
+                                    <i class="fas fa-sliders-h mr-2"></i>
+                                    Set Watch Time
+                                </label>
+                                <input 
+                                    type="range" 
+                                    id="timeSlider" 
+                                    min="0" 
+                                    max="<%= watchProgress.total_minutes %>" 
+                                    value="<%= watchProgress.watched_minutes %>"
+                                    class="progress-slider w-full mb-3"
+                                >
+                                <div class="flex justify-between text-xs text-gray-400">
+                                    <span>0:00</span>
+                                    <span id="sliderTime"><%= formatTime(watchProgress.watched_minutes) %></span>
+                                    <span><%= formatTime(watchProgress.total_minutes) %></span>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="space-y-3">
+                                <button 
+                                    id="updateProgress" 
+                                    class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-medium transition-colors"
+                                >
+                                    <i class="fas fa-save mr-2"></i>
+                                    Update Progress
+                                </button>
+                                
+                                <button 
+                                    id="markComplete" 
+                                    class="w-full bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-medium transition-colors <%= watchProgress.is_completed ? 'opacity-50 cursor-not-allowed' : '' %>"
+                                    <%= watchProgress.is_completed ? 'disabled' : '' %>
+                                >
+                                    <i class="fas fa-check mr-2"></i>
+                                    <%= watchProgress.is_completed ? 'Already Completed' : 'Mark as Complete' %>
+                                </button>
+                                
+                                <button 
+                                    id="resetProgress" 
+                                    class="w-full bg-red-600 hover:bg-red-700 px-4 py-3 rounded-lg font-medium transition-colors"
+                                >
+                                    <i class="fas fa-redo mr-2"></i>
+                                    Reset Progress
+                                </button>
+                            </div>
+
+                            <!-- Watch Status -->
+                            <div class="pt-4 border-t border-gray-700">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-400">Status:</span>
+                                    <span id="watchStatus" class="font-medium">
+                                        <% if (watchProgress.is_completed) { %>
+                                            <span class="text-green-400"><i class="fas fa-check-circle mr-1"></i>Completed</span>
+                                        <% } else if (watchProgress.watched_minutes > 0) { %>
+                                            <span class="text-yellow-400"><i class="fas fa-play-circle mr-1"></i>In Progress</span>
+                                        <% } else { %>
+                                            <span class="text-gray-400"><i class="fas fa-circle mr-1"></i>Not Started</span>
+                                        <% } %>
+                                    </span>
+                                </div>
+                                <% if (watchProgress.last_watched_at) { %>
+                                    <div class="flex items-center justify-between text-sm mt-2">
+                                        <span class="text-gray-400">Last watched:</span>
+                                        <span class="text-gray-300">
+                                            <%= new Date(watchProgress.last_watched_at).toLocaleDateString() %>
+                                        </span>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Helper function to format time
+        function formatTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = Math.floor(minutes % 60);
+            if (hours > 0) {
+                return `${hours}h ${mins}m`;
+            }
+            return `${mins}m`;
+        }
+
+        // Elements
+        const timeSlider = document.getElementById('timeSlider');
+        const sliderTime = document.getElementById('sliderTime');
+        const progressPercent = document.getElementById('progressPercent');
+        const watchedMinutes = document.getElementById('watchedMinutes');
+        const updateBtn = document.getElementById('updateProgress');
+        const completeBtn = document.getElementById('markComplete');
+        const resetBtn = document.getElementById('resetProgress');
+        const watchStatus = document.getElementById('watchStatus');
+        const progressBar = document.querySelector('.progress-bar');
+
+        const totalMinutes = parseInt("<%= watchProgress.total_minutes %>");
+        const episodeId = parseInt("<%= episode.id %>");
+
+        // Update slider display
+        timeSlider.addEventListener('input', () => {
+            const value = parseInt(timeSlider.value);
+            sliderTime.textContent = formatTime(value);
+            
+            const percent = Math.round((value / totalMinutes) * 100);
+            progressPercent.textContent = percent + '%';
+            watchedMinutes.textContent = value + ' min';
+            progressBar.style.setProperty('--progress', percent + '%');
+        });
+
+        // Update progress
+        updateBtn.addEventListener('click', async () => {
+            const watchedMinutes = parseInt(timeSlider.value);
+            const isCompleted = watchedMinutes >= totalMinutes * 0.9; // 90% = completed
+
+            try {
+                const response = await fetch('/api/watch-progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        episodeId: episodeId,
+                        watchedMinutes: watchedMinutes,
+                        isCompleted: isCompleted
+                    })
+                });
+
+                if (response.ok) {
+                    updateWatchStatus(isCompleted, watchedMinutes);
+                    showNotification('Progress updated successfully!', 'success');
+                } else {
+                    showNotification('Failed to update progress', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating progress:', error);
+                showNotification('Error updating progress', 'error');
+            }
+        });
+
+        // Mark as complete
+        completeBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/watch-progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        episodeId: episodeId,
+                        watchedMinutes: totalMinutes,
+                        isCompleted: true
+                    })
+                });
+
+                if (response.ok) {
+                    timeSlider.value = totalMinutes;
+                    timeSlider.dispatchEvent(new Event('input'));
+                    updateWatchStatus(true, totalMinutes);
+                    completeBtn.disabled = true;
+                    completeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    completeBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Already Completed';
+                    showNotification('Episode marked as complete!', 'success');
+                } else {
+                    showNotification('Failed to mark as complete', 'error');
+                }
+            } catch (error) {
+                console.error('Error marking complete:', error);
+                showNotification('Error marking as complete', 'error');
+            }
+        });
+
+        // Reset progress
+        resetBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/watch-progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        episodeId: episodeId,
+                        watchedMinutes: 0,
+                        isCompleted: false
+                    })
+                });
+
+                if (response.ok) {
+                    timeSlider.value = 0;
+                    timeSlider.dispatchEvent(new Event('input'));
+                    updateWatchStatus(false, 0);
+                    completeBtn.disabled = false;
+                    completeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    completeBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Mark as Complete';
+                    showNotification('Progress reset!', 'success');
+                } else {
+                    showNotification('Failed to reset progress', 'error');
+                }
+            } catch (error) {
+                console.error('Error resetting progress:', error);
+                showNotification('Error resetting progress', 'error');
+            }
+        });
+
+        function updateWatchStatus(isCompleted, watchedMinutes) {
+            if (isCompleted) {
+                watchStatus.innerHTML = '<span class="text-green-400"><i class="fas fa-check-circle mr-1"></i>Completed</span>';
+            } else if (watchedMinutes > 0) {
+                watchStatus.innerHTML = '<span class="text-yellow-400"><i class="fas fa-play-circle mr-1"></i>In Progress</span>';
+            } else {
+                watchStatus.innerHTML = '<span class="text-gray-400"><i class="fas fa-circle mr-1"></i>Not Started</span>';
+            }
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white font-medium z-50 ${
+                type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

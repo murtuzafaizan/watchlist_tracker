@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Tracking - Search TV Shows & Movies</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .search-result {
+            transition: all 0.3s ease;
+        }
+        .search-result:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .poster-img {
+            transition: transform 0.3s ease;
+        }
+        .search-result:hover .poster-img {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4 text-blue-400">
+                <i class="fas fa-tv mr-3"></i>Watch Tracking
+            </h1>
+            <p class="text-gray-400 text-lg">Track your TV shows and movies progress</p>
+        </header>
+
+        <main class="max-w-4xl mx-auto">
+            <div class="bg-gray-800 rounded-lg p-6 mb-8">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search TV show or movie..." 
+                        class="w-full px-6 py-4 pr-12 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
+                    >
+                    <button 
+                        id="searchBtn" 
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+                    >
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="loadingSpinner" class="hidden text-center py-8">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-400"></i>
+                <p class="mt-4 text-gray-400">Searching...</p>
+            </div>
+
+            <div id="searchResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Search results will be populated here -->
+            </div>
+
+            <div id="noResults" class="hidden text-center py-12">
+                <i class="fas fa-search text-6xl text-gray-600 mb-4"></i>
+                <p class="text-gray-400 text-lg">No results found. Try a different search term.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const searchResults = document.getElementById('searchResults');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const noResults = document.getElementById('noResults');
+
+        let searchTimeout;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            
+            if (query.length < 2) {
+                searchResults.innerHTML = '';
+                noResults.classList.add('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(() => performSearch(query), 500);
+        });
+
+        searchBtn.addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            if (query.length >= 2) {
+                performSearch(query);
+            }
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                if (query.length >= 2) {
+                    performSearch(query);
+                }
+            }
+        });
+
+        async function performSearch(query) {
+            loadingSpinner.classList.remove('hidden');
+            searchResults.innerHTML = '';
+            noResults.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+                const results = await response.json();
+
+                loadingSpinner.classList.add('hidden');
+
+                if (results.length === 0) {
+                    noResults.classList.remove('hidden');
+                    return;
+                }
+
+                results.forEach(item => {
+                    const resultCard = createResultCard(item);
+                    searchResults.appendChild(resultCard);
+                });
+            } catch (error) {
+                console.error('Search error:', error);
+                loadingSpinner.classList.add('hidden');
+                noResults.classList.remove('hidden');
+            }
+        }
+
+        function createResultCard(item) {
+            const div = document.createElement('div');
+            div.className = 'search-result bg-gray-800 rounded-lg overflow-hidden cursor-pointer';
+            
+            const posterUrl = item.poster_path || 'https://via.placeholder.com/500x750/374151/ffffff?text=No+Image';
+            const title = item.title;
+            const year = item.year || 'Unknown';
+            const mediaType = item.media_type === 'tv' ? 'TV Show' : 'Movie';
+            const mediaIcon = item.media_type === 'tv' ? 'fa-tv' : 'fa-film';
+
+            div.innerHTML = `
+                <div class="relative">
+                    <img src="${posterUrl}" alt="${title}" class="poster-img w-full h-64 object-cover">
+                    <div class="absolute top-2 right-2 bg-black bg-opacity-70 px-2 py-1 rounded text-sm">
+                        <i class="fas ${mediaIcon} mr-1"></i>${mediaType}
+                    </div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-bold text-lg mb-2 line-clamp-2">${title}</h3>
+                    <p class="text-gray-400 text-sm mb-2">${year}</p>
+                    <p class="text-gray-300 text-sm line-clamp-3">${item.overview || 'No description available.'}</p>
+                    ${item.actors ? `<p class="text-gray-400 text-xs mt-2">Starring: ${item.actors}</p>` : ''}
+                </div>
+            `;
+
+            div.addEventListener('click', () => {
+                if (item.media_type === 'tv') {
+                    window.location.href = `/show/${item.id}`;
+                } else {
+                    // For movies, we could implement a different view
+                    alert('Movie tracking coming soon!');
+                }
+            });
+
+            return div;
+        }
+    </script>
+</body>
+</html>

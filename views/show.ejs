@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= show.title %> - Watch Tracking</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .season-card {
+            transition: all 0.3s ease;
+        }
+        .season-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .backdrop {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9));
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="backdrop min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <header class="mb-8">
+                <a href="/" class="inline-flex items-center text-blue-400 hover:text-blue-300 mb-6">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Search
+                </a>
+                
+                <div class="flex flex-col md:flex-row gap-8 items-start">
+                    <div class="flex-shrink-0">
+                        <img src="<%= show.poster_path || 'https://via.placeholder.com/500x750/374151/ffffff?text=No+Image' %>" 
+                             alt="<%= show.title %>" 
+                             class="w-48 h-72 object-cover rounded-lg shadow-2xl">
+                    </div>
+                    
+                    <div class="flex-1">
+                        <h1 class="text-4xl font-bold mb-4"><%= show.title %></h1>
+                        <p class="text-gray-300 mb-6 text-lg leading-relaxed"><%= show.overview || 'No description available.' %></p>
+                        
+                        <div class="flex flex-wrap gap-4 text-sm">
+                            <% if (show.release_date) { %>
+                                <div class="bg-gray-800 px-4 py-2 rounded-lg">
+                                    <i class="fas fa-calendar mr-2 text-blue-400"></i>
+                                    <%= new Date(show.release_date).getFullYear() %>
+                                </div>
+                            <% } %>
+                            <div class="bg-gray-800 px-4 py-2 rounded-lg">
+                                <i class="fas fa-tv mr-2 text-blue-400"></i>
+                                TV Show
+                            </div>
+                            <div class="bg-gray-800 px-4 py-2 rounded-lg">
+                                <i class="fas fa-list mr-2 text-blue-400"></i>
+                                <%= seasons.length %> Seasons
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                <h2 class="text-3xl font-bold mb-8">Seasons</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <% seasons.sort((a, b) => a.season_number - b.season_number).forEach(season => { %>
+                        <div class="season-card bg-gray-800 rounded-lg overflow-hidden cursor-pointer">
+                            <div class="relative">
+                                <img src="<%= season.poster_path || 'https://via.placeholder.com/500x281/374151/ffffff?text=No+Image' %>" 
+                                     alt="<%= season.name %>" 
+                                     class="w-full h-48 object-cover">
+                                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+                                    <h3 class="font-bold text-lg"><%= season.name %></h3>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-gray-400">Season <%= season.season_number %></span>
+                                    <span class="bg-blue-600 px-2 py-1 rounded text-sm">
+                                        <%= season.episode_count %> Episodes
+                                    </span>
+                                </div>
+                                <% if (season.air_date) { %>
+                                    <p class="text-gray-400 text-sm mb-3">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        <%= new Date(season.air_date).toLocaleDateString() %>
+                                    </p>
+                                <% } %>
+                                <% if (season.overview) { %>
+                                    <p class="text-gray-300 text-sm line-clamp-3"><%= season.overview %></p>
+                                <% } %>
+                            </div>
+                        </div>
+                        
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const seasonCards = document.querySelectorAll('.season-card');
+                                seasonCards.forEach((card, index) => {
+                                    card.addEventListener('click', () => {
+                                        window.location.href = `/show/<%= show.tmdb_id %>/season/<%= seasons[index].season_number %>`;
+                                    });
+                                });
+                            });
+                        </script>
+                    <% }); %>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>
